@@ -2,6 +2,7 @@ package com.handy.appserver.controller;
 
 import com.handy.appserver.dto.ProductCreateRequest;
 import com.handy.appserver.dto.ProductUpdateRequest;
+import com.handy.appserver.dto.ProductResponse;
 import com.handy.appserver.entity.product.Product;
 import com.handy.appserver.entity.product.ProductShape;
 import com.handy.appserver.entity.product.ProductSize;
@@ -28,7 +29,7 @@ public class ProductController {
 
     // 상품 등록
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Product> createProduct(
+    public ResponseEntity<ProductResponse> createProduct(
             @AuthenticationPrincipal UserDetails userDetails,
             @ModelAttribute ProductCreateRequest request,
             @RequestParam("mainImage") MultipartFile mainImage,
@@ -48,12 +49,12 @@ public class ProductController {
             detailImages
         );
         
-        return ResponseEntity.ok(product);
+        return ResponseEntity.ok(new ProductResponse(product));
     }
 
     // 상품 수정
     @PutMapping("/{productId}")
-    public ResponseEntity<Product> updateProduct(
+    public ResponseEntity<ProductResponse> updateProduct(
             @PathVariable Long productId,
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestPart("request") ProductUpdateRequest request,
@@ -77,7 +78,7 @@ public class ProductController {
                 detailImages
         );
 
-        return ResponseEntity.ok(product);
+        return ResponseEntity.ok(new ProductResponse(product));
     }
 
     // 상품 삭제 (비활성화)
@@ -94,9 +95,9 @@ public class ProductController {
 
     // 상품 상세 조회
     @GetMapping("/{productId}")
-    public ResponseEntity<Product> getProduct(@PathVariable Long productId) {
+    public ResponseEntity<ProductResponse> getProduct(@PathVariable Long productId) {
         Product product = productService.getProduct(productId);
-        return ResponseEntity.ok(product);
+        return ResponseEntity.ok(new ProductResponse(product));
     }
 
     // 판매자의 상품 목록 조회
