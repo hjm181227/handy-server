@@ -2,7 +2,7 @@ package com.handy.appserver.controller;
 
 import com.handy.appserver.dto.LoginRequest;
 import com.handy.appserver.dto.LoginResponse;
-import com.handy.appserver.entity.User;
+import com.handy.appserver.entity.user.User;
 import com.handy.appserver.service.JwtService;
 import com.handy.appserver.service.UserService;
 import lombok.AllArgsConstructor;

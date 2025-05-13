@@ -1,6 +1,6 @@
 package com.handy.appserver.security;
 
-import com.handy.appserver.entity.User;
+import com.handy.appserver.entity.user.User;
 import com.handy.appserver.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -28,14 +28,11 @@ public class CustomUserDetailsService implements UserDetailsService {
         // 기본 권한
         authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
         
-        // 판매자 권한
-        if (user.isSeller()) {
-            authorities.add(new SimpleGrantedAuthority("ROLE_SELLER"));
-        }
-        
-        // 관리자 권한
-        if (user.isAdmin()) {
+        // authLevel에 따른 권한 부여
+        if (user.getAuthLevel() >= 300) {
             authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        } else if (user.getAuthLevel() >= 200) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_SELLER"));
         }
 
         return new org.springframework.security.core.userdetails.User(

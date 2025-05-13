@@ -1,5 +1,6 @@
 package com.handy.appserver.dto;
 
+import com.handy.appserver.entity.user.UserRole;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -10,4 +11,5 @@ public class UserResponse {
     private String email;
     private String name;
     private Integer authLevel;
+    private UserRole role;
 }
