@@ -41,4 +41,16 @@ logging:
 image:
   server:
     url: ${IMAGE_SERVER_URL:http://localhost:8081}  # 이미지 서버 URL
-    api-key: ${IMAGE_SERVER_API_KEY:your-api-key}  # 이미지 서버 API 키 
+    api-key: ${IMAGE_SERVER_API_KEY:your-api-key}  # 이미지 서버 API 키
+
+cloud:
+  aws:
+    credentials:
+      access-key: ${AWS_ACCESS_KEY}
+      secret-key: ${AWS_SECRET_KEY}
+    region:
+      static: ${AWS_REGION}
+    s3:
+      bucket: ${AWS_S3_BUCKET}
+      presigned-url:
+        expiration: 3600000  # 1시간 

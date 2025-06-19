@@ -2,12 +2,11 @@ package com.handy.appserver.entity.product;
 
 import com.handy.appserver.entity.common.BaseTimeEntity;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
 @Getter
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "product_images")
 public class ProductImage extends BaseTimeEntity {
 
@@ -18,23 +17,34 @@ public class ProductImage extends BaseTimeEntity {
     @Column(nullable = false)
     private String imageUrl;
 
-    @Column(nullable = false)
-    private Integer displayOrder;
+    @Column(nullable = true)
+    private String description;
 
+    @Setter
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
     private com.handy.appserver.entity.product.Product product;
 
-    public ProductImage(String imageUrl, Integer displayOrder) {
+    @OrderColumn(name = "image_order")
+    @Column(name = "image_order")
+    private Integer imageOrder;
+
+    @Builder
+    public ProductImage(String imageUrl, String description, Integer imageOrder) {
         this.imageUrl = imageUrl;
-        this.displayOrder = displayOrder;
+        this.description = description;
+        this.imageOrder = imageOrder;
     }
 
-    public void setProduct(Product product) {
-        this.product = product;
+    public void updateImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
-    public void updateOrder(Integer displayOrder) {
-        this.displayOrder = displayOrder;
+    public void updateDescription(String description) {
+        this.description = description;
     }
-} 
+
+    public void updateImageOrder(Integer imageOrder) {
+        this.imageOrder = imageOrder;
+    }
+}

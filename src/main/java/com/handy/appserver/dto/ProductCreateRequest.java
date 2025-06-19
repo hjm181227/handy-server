@@ -1,7 +1,7 @@
 package com.handy.appserver.dto;
 
-import com.handy.appserver.entity.product.ProductSize;
 import com.handy.appserver.entity.product.ProductShape;
+import com.handy.appserver.entity.product.ProductSize;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -19,4 +19,6 @@ public class ProductCreateRequest {
     private BigDecimal price;
     private Integer productionDays;
     private List<Long> categoryIds;
+    private String mainImageUrl;
+    private List<DetailImageRequest> detailImages;
 } 

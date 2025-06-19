@@ -19,4 +19,6 @@ public class ProductUpdateRequest {
     private BigDecimal price;
     private Integer productionDays;
     private List<Long> categoryIds;
+    private String mainImageUrl;
+    private List<DetailImageRequest> detailImages;
 } 

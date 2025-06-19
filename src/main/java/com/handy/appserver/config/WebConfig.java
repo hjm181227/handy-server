@@ -10,11 +10,17 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOriginPatterns("*")
+                .allowedOriginPatterns("*")  // Allow all origins for development
+                // .allowedOrigins(
+                //     "http://localhost:8080",
+                //     "http://172.29.9.249:8080",
+                //     "http://172.30.1.254:8080",
+                //     "https://web.postman.co"
+                // )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
                 .allowedHeaders("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers")
                 .exposedHeaders("Authorization")
-                .allowCredentials(false)
+                .allowCredentials(false)  // Must be false when using wildcard
                 .maxAge(3600);
     }
 } 

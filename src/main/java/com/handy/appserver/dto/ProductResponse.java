@@ -53,11 +53,11 @@ public class ProductResponse {
 class ProductImageResponse {
     private final Long id;
     private final String imageUrl;
-    private final Integer displayOrder;
+    private final Integer imageOrder;
 
     public ProductImageResponse(ProductImage image) {
         this.id = image.getId();
         this.imageUrl = image.getImageUrl();
-        this.displayOrder = image.getDisplayOrder();
+        this.imageOrder = image.getImageOrder();
     }
 } 

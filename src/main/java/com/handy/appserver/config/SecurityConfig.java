@@ -104,7 +104,7 @@ public class SecurityConfig {
             "Access-Control-Request-Headers"
         ));
         configuration.setExposedHeaders(Arrays.asList("Authorization"));
-        configuration.setAllowCredentials(false); // credentials 비활성화
+        configuration.setAllowCredentials(false);  // Must be false when using wildcard
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

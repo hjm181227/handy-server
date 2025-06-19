@@ -40,9 +40,6 @@ public class UserController {
             @PathVariable Long userId,
             @RequestBody AuthLevelUpdateRequest request) {
         User updatedUser = userService.updateAuthLevel(userId, request.getAuthLevel());
-        UserRole updatedRole = request.getAuthLevel() == 100 ? UserRole.USER :
-                request.getAuthLevel() == 200 ? UserRole.SELLER : UserRole.ADMIN;
-        userService.updateRole(userId, updatedRole);
 
         return ResponseEntity.ok(new UserResponse(
                 updatedUser.getId(),

@@ -3,22 +3,28 @@ package com.handy.appserver.controller;
 import com.handy.appserver.dto.ProductCreateRequest;
 import com.handy.appserver.dto.ProductUpdateRequest;
 import com.handy.appserver.dto.ProductResponse;
+import com.handy.appserver.dto.ProductListResponse;
 import com.handy.appserver.entity.product.Product;
 import com.handy.appserver.entity.product.ProductShape;
 import com.handy.appserver.entity.product.ProductSize;
+import com.handy.appserver.entity.product.ProductSortType;
+import com.handy.appserver.security.CustomUserDetails;
 import com.handy.appserver.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequiredArgsConstructor
@@ -28,15 +34,18 @@ public class ProductController {
     private final ProductService productService;
 
     // 상품 등록
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ProductResponse> createProduct(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @ModelAttribute ProductCreateRequest request,
-            @RequestParam("mainImage") MultipartFile mainImage,
-            @RequestParam(value = "detailImages", required = false) List<MultipartFile> detailImages) {
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody ProductCreateRequest request) {
+        
+        if (userDetails == null) {
+            return ResponseEntity.status(401).build();
+        }
         
         Product product = productService.createProduct(
-            userDetails,
+            userDetails.getId(),
             request.getName(),
             request.getShape(),
             request.isShapeChangeable(),
@@ -45,8 +54,8 @@ public class ProductController {
             request.getPrice(),
             request.getProductionDays(),
             request.getCategoryIds(),
-            mainImage,
-            detailImages
+            request.getMainImageUrl(),
+            request.getDetailImages()
         );
         
         return ResponseEntity.ok(new ProductResponse(product));
@@ -54,18 +63,19 @@ public class ProductController {
 
     // 상품 수정
     @PutMapping("/{productId}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ProductResponse> updateProduct(
             @PathVariable Long productId,
-            @AuthenticationPrincipal UserDetails userDetails,
-            @RequestPart("request") ProductUpdateRequest request,
-            @RequestPart(value = "mainImage", required = false) MultipartFile mainImage,
-            @RequestPart(value = "detailImages", required = false) List<MultipartFile> detailImages) {
-        // TODO: userDetails에서 sellerId 추출 로직 구현
-        Long sellerId = 1L; // 임시 sellerId
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody ProductUpdateRequest request) {
+        
+        if (userDetails == null) {
+            return ResponseEntity.status(401).build();
+        }
 
         Product product = productService.updateProduct(
                 productId,
-                sellerId,
+                userDetails.getId(),
                 request.getName(),
                 request.getShape(),
                 request.isShapeChangeable(),
@@ -74,8 +84,8 @@ public class ProductController {
                 request.getPrice(),
                 request.getProductionDays(),
                 request.getCategoryIds(),
-                mainImage,
-                detailImages
+                request.getMainImageUrl(),
+                request.getDetailImages()
         );
 
         return ResponseEntity.ok(new ProductResponse(product));
@@ -83,13 +93,16 @@ public class ProductController {
 
     // 상품 삭제 (비활성화)
     @DeleteMapping("/{productId}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> deactivateProduct(
             @PathVariable Long productId,
-            @AuthenticationPrincipal UserDetails userDetails) {
-        // TODO: userDetails에서 sellerId 추출 로직 구현
-        Long sellerId = 1L; // 임시 sellerId
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        if (userDetails == null) {
+            return ResponseEntity.status(401).build();
+        }
 
-        productService.deactivateProduct(productId, sellerId);
+        productService.deactivateProduct(productId, userDetails.getId());
         return ResponseEntity.ok().build();
     }
 
@@ -101,45 +114,77 @@ public class ProductController {
     }
 
     // 판매자의 상품 목록 조회
-    @GetMapping("/seller")
-    public ResponseEntity<Page<Product>> getSellerProducts(
-            @AuthenticationPrincipal UserDetails userDetails,
-            Pageable pageable) {
-        // TODO: userDetails에서 sellerId 추출 로직 구현
-        Long sellerId = 1L; // 임시 sellerId
-
-        Page<Product> products = productService.getSellerProducts(sellerId, pageable);
-        return ResponseEntity.ok(products);
+    @GetMapping("/seller/{sellerId}")
+    public ResponseEntity<Page<ProductListResponse>> getSellerProducts(
+            @PathVariable Long sellerId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) ProductSortType sort,
+            @RequestParam(required = false) String keyword) {
+        
+        Pageable pageable = createPageable(page, size, sort);
+        Page<Product> products = productService.getSellerProducts(sellerId, keyword, pageable);
+        Page<ProductListResponse> response = products.map(ProductListResponse::new);
+        return ResponseEntity.ok(response);
     }
 
     // 카테고리별 상품 목록 조회
     @GetMapping("/category/{categoryId}")
-    public ResponseEntity<Page<Product>> getProductsByCategory(
+    public ResponseEntity<Page<ProductListResponse>> getProductsByCategory(
             @PathVariable Long categoryId,
-            Pageable pageable) {
-        Page<Product> products = productService.getProductsByCategory(categoryId, pageable);
-        return ResponseEntity.ok(products);
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) ProductSortType sort,
+            @RequestParam(required = false) String keyword) {
+        
+        Pageable pageable = createPageable(page, size, sort);
+        Page<Product> products = productService.getProductsByCategory(categoryId, keyword, pageable);
+        Page<ProductListResponse> response = products.map(ProductListResponse::new);
+        return ResponseEntity.ok(response);
     }
 
     // 상품명으로 검색
     @GetMapping("/search")
-    public ResponseEntity<Page<Product>> searchProducts(
-            @RequestParam String name,
-            Pageable pageable) {
-        Page<Product> products = productService.searchProductsByName(name, pageable);
-        return ResponseEntity.ok(products);
+    public ResponseEntity<Page<ProductListResponse>> searchProducts(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) ProductSortType sort) {
+        
+        Pageable pageable = createPageable(page, size, sort);
+        Page<Product> products = productService.searchProductsByName(keyword, pageable);
+        Page<ProductListResponse> response = products.map(ProductListResponse::new);
+        return ResponseEntity.ok(response);
     }
 
     // 활성화된 상품만 조회
     @GetMapping("/active")
-    public ResponseEntity<Page<Product>> getActiveProducts(Pageable pageable) {
-        Page<Product> products = productService.getActiveProducts(pageable);
-        return ResponseEntity.ok(products);
+    public ResponseEntity<Page<ProductListResponse>> getActiveProducts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) ProductSortType sort,
+            @RequestParam(required = false) String keyword) {
+        
+        Pageable pageable = createPageable(page, size, sort);
+        Page<Product> products = productService.getActiveProducts(keyword, pageable);
+        Page<ProductListResponse> response = products.map(ProductListResponse::new);
+        return ResponseEntity.ok(response);
     }
+
     // 여러 상품 조회
     @PostMapping("/batch")
-    public ResponseEntity<List<Product>> getProductsByIds(@RequestBody List<Long> productIds) {
+    public ResponseEntity<List<ProductListResponse>> getProductsByIds(@RequestBody List<Long> productIds) {
         List<Product> products = productService.getProductsByIds(productIds);
-        return ResponseEntity.ok(products);
+        List<ProductListResponse> response = products.stream()
+                .map(ProductListResponse::new)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
+    }
+
+    private Pageable createPageable(int page, int size, ProductSortType sort) {
+        if (sort == null) {
+            sort = ProductSortType.CREATED_AT_DESC; // 기본값: 최신순
+        }
+        return PageRequest.of(page, size, Sort.by(Sort.Direction.fromString(sort.getDirection()), sort.getField()));
     }
 } 

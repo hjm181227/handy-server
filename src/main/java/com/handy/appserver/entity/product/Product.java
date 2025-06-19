@@ -3,8 +3,7 @@ package com.handy.appserver.entity.product;
 import com.handy.appserver.entity.common.BaseTimeEntity;
 import com.handy.appserver.entity.user.User;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -12,7 +11,8 @@ import java.util.List;
 
 @Entity
 @Getter
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 @Table(name = "products")
 public class Product extends BaseTimeEntity {
 
@@ -23,10 +23,12 @@ public class Product extends BaseTimeEntity {
     @Column(nullable = false)
     private String name;
 
+    @Setter
     @Column(nullable = false)
     private String mainImageUrl;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("id ASC")
     private List<ProductImage> detailImages = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
@@ -64,6 +66,7 @@ public class Product extends BaseTimeEntity {
     @Column(nullable = false)
     private boolean isActive = true;
 
+    @Builder
     public Product(String name, String mainImageUrl, ProductShape shape, boolean shapeChangeable,
                   ProductSize size, boolean sizeChangeable,
                   BigDecimal price, Integer productionDays, User seller) {
@@ -97,6 +100,16 @@ public class Product extends BaseTimeEntity {
         }
         detailImages.add(image);
         image.setProduct(this);
+    }
+
+    public void updateDetailImages(List<ProductImage> images) {
+        if (images.size() > 5) {
+            throw new IllegalStateException("상세 이미지는 최대 5장까지만 추가할 수 있습니다.");
+        }
+        this.detailImages.clear();
+        for (ProductImage image : images) {
+            addDetailImage(image);
+        }
     }
 
     public void removeDetailImage(ProductImage image) {
