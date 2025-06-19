@@ -21,6 +21,10 @@ public class User extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Getter
+    @Column(nullable = true)
+    private String profileImageUrl;
+
     @Column(nullable = false, unique = true)
     private String email;
 
