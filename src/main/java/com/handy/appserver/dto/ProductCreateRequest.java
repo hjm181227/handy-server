@@ -17,6 +17,7 @@ public class ProductCreateRequest {
     private ProductSize size;
     private boolean sizeChangeable;
     private BigDecimal price;
+    private boolean customAvailable;
     private Integer productionDays;
     private List<Long> categoryIds;
     private String mainImageUrl;

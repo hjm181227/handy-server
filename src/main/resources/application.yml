@@ -1,4 +1,6 @@
 spring:
+  profiles:
+    active: local
   application:
     name: handy-server
   datasource:
@@ -37,11 +39,6 @@ logging:
     com.handy.appserver: DEBUG
     org.springframework.security: DEBUG
     org.springframework.web: DEBUG
-
-image:
-  server:
-    url: ${IMAGE_SERVER_URL:http://localhost:8081}  # 이미지 서버 URL
-    api-key: ${IMAGE_SERVER_API_KEY:your-api-key}  # 이미지 서버 API 키
 
 cloud:
   aws:

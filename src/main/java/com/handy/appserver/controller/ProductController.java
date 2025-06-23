@@ -53,6 +53,7 @@ public class ProductController {
             request.isSizeChangeable(),
             request.getPrice(),
             request.getProductionDays(),
+            request.isCustomAvailable(), // customAvailable 기본값 false
             request.getCategoryIds(),
             request.getMainImageUrl(),
             request.getDetailImages()

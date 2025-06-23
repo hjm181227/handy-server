@@ -1,124 +1,71 @@
 package com.handy.appserver.service;
 
-import com.handy.appserver.dto.ImageUploadResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.retry.support.RetryTemplate;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
+import java.net.URL;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ImageService {
+    @Value("${cloud.aws.s3.bucket}")
+    private String bucket;
 
-    private final RestTemplate restTemplate;
-    private final RetryTemplate retryTemplate;
+    @Value("${cloud.aws.region.static:ap-northeast-2}")
+    private String region;
 
-    @Value("${image.server.url}")
-    private String imageServerUrl;
+    private final S3Client s3Client;
 
-    @Value("${image.server.api-key}")
-    private String apiKey;
-
-    @Async
-    public CompletableFuture<ImageUploadResponse> uploadImageAsync(MultipartFile file) {
-        return CompletableFuture.supplyAsync(() -> uploadImage(file));
+    /**
+     * temp 폴더에 있는 이미지를 목적 폴더로 이동 (copy+delete)
+     * @param sourceUrl temp에 업로드된 S3 URL
+     * @param targetKey 이동할 S3 key (예: products/main/123/abc.jpg)
+     * @return 이동 후 최종 S3 URL
+     */
+    public String moveImageInS3(String sourceUrl, String targetKey) {
+        String sourceKey = extractKeyFromUrl(sourceUrl);
+        try {
+            // 1. copy
+            CopyObjectRequest copyReq = CopyObjectRequest.builder()
+                    .sourceBucket(bucket)
+                    .sourceKey(sourceKey)
+                    .destinationBucket(bucket)
+                    .destinationKey(targetKey)
+                    .build();
+            s3Client.copyObject(copyReq);
+            // 2. delete
+            DeleteObjectRequest delReq = DeleteObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(sourceKey)
+                    .build();
+            s3Client.deleteObject(delReq);
+            // 3. return new url
+            return generateS3Url(targetKey);
+        } catch (S3Exception e) {
+            log.error("S3 이미지 이동 실패: {} -> {}", sourceKey, targetKey, e);
+            throw new RuntimeException("S3 이미지 이동 실패", e);
+        }
     }
 
-    public ImageUploadResponse uploadImage(MultipartFile file) {
-        return retryTemplate.execute(context -> {
-            try {
-                log.info("이미지 업로드 시도 (시도 횟수: {})", context.getRetryCount() + 1);
-                
-                HttpHeaders headers = new HttpHeaders();
-                headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-                headers.set("X-API-Key", apiKey);
-
-                MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-                body.add("file", new ByteArrayResource(file.getBytes()) {
-                    @Override
-                    public String getFilename() {
-                        return file.getOriginalFilename();
-                    }
-                });
-
-                HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
-
-                ResponseEntity<ImageUploadResponse> response = restTemplate.postForEntity(
-                        imageServerUrl + "/upload",
-                        requestEntity,
-                        ImageUploadResponse.class
-                );
-
-                log.info("이미지 업로드 성공: {}", response.getBody().getImageUrl());
-                return response.getBody();
-            } catch (IOException e) {
-                log.error("이미지 업로드 실패 (시도 횟수: {}): {}", context.getRetryCount() + 1, e.getMessage());
-                throw new RuntimeException("이미지 업로드 중 오류가 발생했습니다.", e);
-            }
-        });
+    private String extractKeyFromUrl(String url) {
+        // https://{bucket}.s3.{region}.amazonaws.com/{key} 형식에서 key만 추출
+        try {
+            URL u = new URL(url);
+            String path = u.getPath();
+            if (path.startsWith("/")) path = path.substring(1);
+            return path;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("잘못된 S3 URL: " + url, e);
+        }
     }
 
-    public List<ImageUploadResponse> uploadImages(List<MultipartFile> files) {
-        List<CompletableFuture<ImageUploadResponse>> futures = files.stream()
-                .map(this::uploadImageAsync)
-                .collect(Collectors.toList());
-
-        return futures.stream()
-                .map(CompletableFuture::join)
-                .collect(Collectors.toList());
-    }
-
-    @Async
-    public CompletableFuture<Void> deleteImageAsync(String imageUrl) {
-        return CompletableFuture.runAsync(() -> deleteImage(imageUrl));
-    }
-
-    public void deleteImage(String imageUrl) {
-        retryTemplate.execute(context -> {
-            try {
-                log.info("이미지 삭제 시도 (시도 횟수: {})", context.getRetryCount() + 1);
-                
-                HttpHeaders headers = new HttpHeaders();
-                headers.set("X-API-Key", apiKey);
-
-                HttpEntity<?> requestEntity = new HttpEntity<>(headers);
-
-                restTemplate.delete(
-                        imageServerUrl + "/delete?url=" + imageUrl,
-                        requestEntity
-                );
-
-                log.info("이미지 삭제 성공: {}", imageUrl);
-                return null;
-            } catch (Exception e) {
-                log.error("이미지 삭제 실패 (시도 횟수: {}): {}", context.getRetryCount() + 1, e.getMessage());
-                throw new RuntimeException("이미지 삭제 중 오류가 발생했습니다.", e);
-            }
-        });
-    }
-
-    public void deleteImages(List<String> imageUrls) {
-        List<CompletableFuture<Void>> futures = imageUrls.stream()
-                .map(this::deleteImageAsync)
-                .collect(Collectors.toList());
-
-        futures.forEach(CompletableFuture::join);
+    private String generateS3Url(String key) {
+        return String.format("https://%s.s3.%s.amazonaws.com/%s", bucket, region, key);
     }
 } 

@@ -1,7 +1,6 @@
 package com.handy.appserver.service;
 
 import com.handy.appserver.dto.DetailImageRequest;
-import com.handy.appserver.dto.ProductCreateRequest;
 import com.handy.appserver.entity.product.*;
 import com.handy.appserver.entity.user.User;
 import com.handy.appserver.entity.user.UserRole;
@@ -14,7 +13,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -42,6 +40,7 @@ public class ProductService {
             boolean sizeChangeable,
             BigDecimal price,
             int productionDays,
+            boolean customAvailable,
             List<Long> categoryIds,
             String mainImageUrl,
             List<DetailImageRequest> detailImages) {
@@ -68,6 +67,7 @@ public class ProductService {
                 .sizeChangeable(sizeChangeable)
                 .price(price)
                 .productionDays(productionDays)
+//                .customAvailable(customAvailable)
                 .build();
 
         try {
