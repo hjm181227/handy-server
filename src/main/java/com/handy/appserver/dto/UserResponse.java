@@ -12,4 +12,5 @@ public class UserResponse {
     private String name;
     private Integer authLevel;
     private UserRole role;
+    private String profileImageUrl;
 }

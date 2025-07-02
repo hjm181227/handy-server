@@ -5,6 +5,7 @@ import com.handy.appserver.dto.ImageMoveRequest;
 import com.handy.appserver.dto.ImageMoveResponse;
 import com.handy.appserver.service.ImageService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -14,6 +15,7 @@ import com.handy.appserver.service.S3Service;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.MediaType;
 
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/images")
@@ -26,6 +28,14 @@ public class ImageController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<PresignedUrlResponse> generatePresignedUrl(@RequestBody PresignedUrlRequest request) {
         String presignedUrl = s3Service.generatePresignedUrl(request.getFileName());
+        return ResponseEntity.ok(new PresignedUrlResponse(presignedUrl));
+    }
+
+    @PostMapping("/profile/presigned-url")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<PresignedUrlResponse> generateProfileImagePresignedUrl(@RequestBody PresignedUrlRequest request) {
+        log.debug("Generating presigned URL for profile image: {}", request.getFileName());
+        String presignedUrl = s3Service.generateProfileImagePresignedUrl(request.getFileName());
         return ResponseEntity.ok(new PresignedUrlResponse(presignedUrl));
     }
 

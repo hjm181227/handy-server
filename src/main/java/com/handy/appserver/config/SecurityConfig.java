@@ -69,6 +69,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/chat/**").permitAll()
                 .requestMatchers("/api/search/**").permitAll()
                 .requestMatchers("/api/reports/**").permitAll()
+                .requestMatchers("/api/snap/list").permitAll()
+                .requestMatchers("/api/snap/posts/**").permitAll()
                 .requestMatchers("/api/snap/**").authenticated()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/error").permitAll()
