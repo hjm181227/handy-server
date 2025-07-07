@@ -2,13 +2,16 @@ package com.handy.appserver.service;
 
 import com.handy.appserver.dto.SnapPostRequest;
 import com.handy.appserver.dto.SnapPostResponse;
-import com.handy.appserver.dto.SnapImageResponse;
+import com.handy.appserver.dto.SnapPostWithLikeInfoResponse;
 import com.handy.appserver.entity.user.User;
 import com.handy.appserver.entity.snap.SnapImage;
 import com.handy.appserver.entity.snap.SnapPost;
+import com.handy.appserver.entity.like.LikeTargetType;
 import com.handy.appserver.repository.SnapPostRepository;
 import com.handy.appserver.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +24,8 @@ public class SnapPostService {
 
     private final SnapPostRepository snapPostRepository;
     private final UserRepository userRepository;
+    private final LikeService likeService;
+    private static final String DEFAULT_PROFILE_IMAGE_URL = "https://handy-images-bucket.s3.ap-northeast-2.amazonaws.com/default_user.png";
 
     @Transactional
     public SnapPostResponse createSnapPost(SnapPostRequest request, Long userId) {
@@ -30,7 +35,7 @@ public class SnapPostService {
         SnapPost snapPost = new SnapPost();
         snapPost.setTitle(request.getTitle());
         snapPost.setContent(request.getContent());
-        snapPost.setUserId(userId);
+        snapPost.setUser(user);
 
         // 이미지 처리
         if (request.getImages() != null && !request.getImages().isEmpty()) {
@@ -46,30 +51,93 @@ public class SnapPostService {
         }
 
         SnapPost savedSnapPost = snapPostRepository.save(snapPost);
-        return convertToResponse(savedSnapPost, user);
+        return convertToResponse(savedSnapPost, user, user);
     }
 
-    private SnapPostResponse convertToResponse(SnapPost snapPost, User user) {
+    @Transactional(readOnly = true)
+    public SnapPostResponse getSnapPostById(Long snapPostId, User currentUser) {
+        SnapPost snapPost = snapPostRepository.findById(snapPostId)
+                .orElseThrow(() -> new IllegalArgumentException("스냅 게시글을 찾을 수 없습니다."));
+        
+        if (!snapPost.isActive()) {
+            throw new IllegalArgumentException("비활성화된 스냅 게시글입니다.");
+        }
+        
+        return convertToResponse(snapPost, snapPost.getUser(), currentUser);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<SnapPostResponse> getAllSnapPosts(Pageable pageable, User currentUser) {
+        Page<SnapPost> snapPosts = snapPostRepository.findByIsActiveTrue(pageable);
+        return snapPosts.map(snapPost -> convertToResponse(snapPost, snapPost.getUser(), currentUser));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<SnapPostResponse> getSnapPostsByUserId(Long userId, Pageable pageable, User currentUser) {
+        // 사용자 존재 여부 확인
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        
+        Page<SnapPost> snapPosts = snapPostRepository.findByUserAndIsActiveTrue(user, pageable);
+        return snapPosts.map(snapPost -> convertToResponse(snapPost, user, currentUser));
+    }
+
+    private SnapPostResponse convertToResponse(SnapPost snapPost, User user, User currentUser) {
         SnapPostResponse response = new SnapPostResponse();
         response.setId(snapPost.getId());
         response.setTitle(snapPost.getTitle());
         response.setContent(snapPost.getContent());
-        response.setUserId(snapPost.getUserId());
+        response.setUserId(user.getId());
         response.setUserName(user.getName());
-        response.setUserProfileImage(user.getProfileImageUrl());
+        String profileImage = (user.getProfileImageUrl() == null || user.getProfileImageUrl().isEmpty())
+            ? DEFAULT_PROFILE_IMAGE_URL
+            : user.getProfileImageUrl();
+        response.setUserProfileImage(profileImage);
         response.setCreatedAt(snapPost.getCreatedAt());
         response.setUpdatedAt(snapPost.getUpdatedAt());
         
-        List<SnapImageResponse> imageResponses = snapPost.getImages().stream()
-                .map(image -> {
-                    SnapImageResponse imageResponse = new SnapImageResponse();
-                    imageResponse.setId(image.getId());
-                    imageResponse.setImageUrl(image.getImageUrl());
-                    return imageResponse;
-                })
+        List<String> imageUrls = snapPost.getImages().stream()
+                .map(SnapImage::getImageUrl)
                 .collect(Collectors.toList());
-        response.setImages(imageResponses);
+        response.setImages(imageUrls);
+        
+        // 좋아요 수 계산
+        int likeCount = likeService.getLikeCount(snapPost.getId(), LikeTargetType.SNAP);
+        response.setLikeCount(likeCount);
+        
+        // 좋아요 상태 설정
+        if (currentUser != null && currentUser.getId() != null) {
+            boolean isLiked = likeService.isLikedByUser(currentUser, snapPost.getId(), LikeTargetType.SNAP);
+            response.setLiked(isLiked);
+        } else {
+            response.setLiked(false);
+        }
         
         return response;
+    }
+
+    /**
+     * 효율적인 좋아요 정보 조회를 위한 메서드
+     * 여러 SnapPost의 좋아요 정보를 한 번에 조회
+     */
+    @Transactional(readOnly = true)
+    public List<SnapPostWithLikeInfoResponse> getSnapPostsWithLikeInfo(List<SnapPost> snapPosts, User currentUser) {
+        return likeService.getSnapPostsWithLikeInfo(snapPosts, currentUser);
+    }
+
+    /**
+     * 특정 사용자의 SnapPost 목록을 효율적으로 조회 (좋아요 정보 포함)
+     */
+    @Transactional(readOnly = true)
+    public List<SnapPostWithLikeInfoResponse> getUserSnapPostsWithLikeInfo(Long userId, User currentUser) {
+        // 사용자 존재 여부 확인
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        
+        // 활성화된 SnapPost 목록 조회
+        List<SnapPost> snapPosts = snapPostRepository.findByUserAndIsActiveTrueOrderByCreatedAtDesc(user);
+        
+        // 좋아요 정보와 함께 반환
+        return getSnapPostsWithLikeInfo(snapPosts, currentUser);
     }
 } 
