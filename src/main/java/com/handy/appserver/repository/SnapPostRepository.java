@@ -7,6 +7,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface SnapPostRepository extends JpaRepository<SnapPost, Long> {
     
@@ -15,4 +17,7 @@ public interface SnapPostRepository extends JpaRepository<SnapPost, Long> {
     
     // 특정 사용자의 활성화된 스냅 포스트 조회 (최신순)
     Page<SnapPost> findByUserAndIsActiveTrue(User user, Pageable pageable);
+    
+    // 특정 사용자의 활성화된 스냅 포스트 목록 조회 (최신순) - List 형태
+    List<SnapPost> findByUserAndIsActiveTrueOrderByCreatedAtDesc(User user);
 } 

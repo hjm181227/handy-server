@@ -2,6 +2,7 @@ package com.handy.appserver.service;
 
 import com.handy.appserver.dto.SnapPostRequest;
 import com.handy.appserver.dto.SnapPostResponse;
+import com.handy.appserver.dto.SnapPostWithLikeInfoResponse;
 import com.handy.appserver.entity.user.User;
 import com.handy.appserver.entity.snap.SnapImage;
 import com.handy.appserver.entity.snap.SnapPost;
@@ -113,5 +114,30 @@ public class SnapPostService {
         }
         
         return response;
+    }
+
+    /**
+     * 효율적인 좋아요 정보 조회를 위한 메서드
+     * 여러 SnapPost의 좋아요 정보를 한 번에 조회
+     */
+    @Transactional(readOnly = true)
+    public List<SnapPostWithLikeInfoResponse> getSnapPostsWithLikeInfo(List<SnapPost> snapPosts, User currentUser) {
+        return likeService.getSnapPostsWithLikeInfo(snapPosts, currentUser);
+    }
+
+    /**
+     * 특정 사용자의 SnapPost 목록을 효율적으로 조회 (좋아요 정보 포함)
+     */
+    @Transactional(readOnly = true)
+    public List<SnapPostWithLikeInfoResponse> getUserSnapPostsWithLikeInfo(Long userId, User currentUser) {
+        // 사용자 존재 여부 확인
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        
+        // 활성화된 SnapPost 목록 조회
+        List<SnapPost> snapPosts = snapPostRepository.findByUserAndIsActiveTrueOrderByCreatedAtDesc(user);
+        
+        // 좋아요 정보와 함께 반환
+        return getSnapPostsWithLikeInfo(snapPosts, currentUser);
     }
 } 

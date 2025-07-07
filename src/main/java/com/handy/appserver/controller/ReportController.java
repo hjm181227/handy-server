@@ -19,6 +19,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/reports")
@@ -30,24 +32,10 @@ public class ReportController {
 
     @PostMapping
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ReportResponse> createReport(
-            @RequestBody ReportRequest request,
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
-        
-        log.debug("Creating report - targetType: {}, targetId: {}, user: {}", 
-                request.getTargetType(), request.getTargetId(), userDetails.getId());
-        
-        if (userDetails == null) {
-            return ResponseEntity.status(401).build();
-        }
-        
-        try {
-            ReportResponse report = reportService.createReport(request, userDetails.getId());
-            return ResponseEntity.ok(report);
-        } catch (IllegalArgumentException e) {
-            log.warn("Failed to create report: {}", e.getMessage());
-            return ResponseEntity.badRequest().build();
-        }
+    public ResponseEntity<?> createReport(
+            @RequestBody ReportRequest request) {
+        reportService.createReport(request);
+        return ResponseEntity.ok(Map.of("message", "신고가 접수되었습니다."));
     }
 
     @GetMapping("/target")

@@ -4,6 +4,7 @@ import com.handy.appserver.dto.SnapPostRequest;
 import com.handy.appserver.dto.SnapPostResponse;
 import com.handy.appserver.dto.PaginationResponse;
 import com.handy.appserver.dto.SnapLikeResponse;
+import com.handy.appserver.dto.SnapPostWithLikeInfoResponse;
 import com.handy.appserver.entity.like.LikeTargetType;
 import com.handy.appserver.entity.user.User;
 import com.handy.appserver.security.CustomUserDetails;
@@ -20,6 +21,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Slf4j
 @RestController
@@ -154,5 +157,30 @@ public class SnapPostController {
         }
         
         return ResponseEntity.ok(PaginationResponse.from(snapPosts));
+    }
+
+    /**
+     * 특정 사용자의 SnapPost 목록을 효율적으로 조회 (좋아요 정보 포함)
+     */
+    @GetMapping("/user/{userId}/posts")
+    public ResponseEntity<List<SnapPostWithLikeInfoResponse>> getUserSnapPostsWithLikeInfo(
+            @PathVariable Long userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        log.debug("Getting user snap posts with like info - userId: {}, currentUser: {}", 
+                userId, userDetails != null ? userDetails.getId() : "null");
+        
+        try {
+            User currentUser = null;
+            if (userDetails != null) {
+                currentUser = userService.findById(userDetails.getId());
+            }
+            
+            List<SnapPostWithLikeInfoResponse> snapPosts = snapPostService.getUserSnapPostsWithLikeInfo(userId, currentUser);
+            return ResponseEntity.ok(snapPosts);
+        } catch (IllegalArgumentException e) {
+            log.warn("Failed to get user snap posts: {}", e.getMessage());
+            return ResponseEntity.notFound().build();
+        }
     }
 } 

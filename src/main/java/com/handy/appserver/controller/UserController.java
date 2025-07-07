@@ -7,6 +7,7 @@ import com.handy.appserver.dto.UserResponse;
 import com.handy.appserver.dto.UserPublicResponse;
 import com.handy.appserver.dto.UserLikeResponse;
 import com.handy.appserver.dto.UserSnapProfileResponse;
+import com.handy.appserver.dto.PasswordChangeRequest;
 import com.handy.appserver.entity.like.LikeTargetType;
 import com.handy.appserver.entity.user.User;
 import com.handy.appserver.security.CustomUserDetails;
@@ -20,6 +21,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -192,6 +195,19 @@ public class UserController {
         } catch (Exception e) {
             log.error("Unexpected error during profile image reset", e);
             return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @PutMapping("/me/password")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> changePassword(
+            @RequestBody PasswordChangeRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        try {
+            userService.changePassword(userDetails.getId(), request.getCurrentPassword(), request.getNewPassword());
+            return ResponseEntity.ok(Map.of("message", "비밀번호가 변경되었습니다."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 }

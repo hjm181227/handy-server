@@ -19,6 +19,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.core.context.SecurityContextHolder;
+import com.handy.appserver.security.CustomUserDetails;
+import java.time.LocalDateTime;
 
 @Slf4j
 @Service
@@ -31,32 +34,20 @@ public class ReportService {
     private final CommentRepository commentRepository;
 
     @Transactional
-    public ReportResponse createReport(ReportRequest request, Long reporterId) {
-        User reporter = userRepository.findById(reporterId)
-                .orElseThrow(() -> new IllegalArgumentException("신고자를 찾을 수 없습니다."));
-
-        // 신고 대상 존재 여부 확인
-        validateTarget(request.getTargetType(), request.getTargetId());
-
-        // 이미 신고했는지 확인
-        if (reportRepository.existsByReporterAndTargetTypeAndTargetId(reporter, request.getTargetType(), request.getTargetId())) {
-            throw new IllegalArgumentException("이미 신고한 대상입니다.");
-        }
-
+    public ReportResponse createReport(ReportRequest request) {
+        User reporter = getCurrentUser();
         Report report = new Report();
         report.setReporter(reporter);
-        report.setTargetType(request.getTargetType());
         report.setTargetId(request.getTargetId());
+        report.setTargetType(request.getTargetType());
         report.setReason(request.getReason());
         report.setContent(request.getContent());
-        report.setStatus(ReportStatus.PENDING);
-
-        Report savedReport = reportRepository.save(report);
+        reportRepository.save(report);
         
         // 신고 대상의 신고 수 증가
         updateTargetReportCount(request.getTargetType(), request.getTargetId());
 
-        return convertToResponse(savedReport);
+        return convertToResponse(report);
     }
 
     @Transactional(readOnly = true)
@@ -163,5 +154,18 @@ public class ReportService {
         response.setCreatedAt(report.getCreatedAt());
         response.setUpdatedAt(report.getUpdatedAt());
         return response;
+    }
+
+    private User getCurrentUser() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new IllegalStateException("인증된 사용자가 없습니다.");
+        }
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof CustomUserDetails userDetails) {
+            return userRepository.findById(userDetails.getId())
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
+        }
+        throw new IllegalStateException("인증 정보가 올바르지 않습니다.");
     }
 } 
