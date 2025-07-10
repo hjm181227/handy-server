@@ -4,6 +4,8 @@ import com.handy.appserver.dto.ProductCreateRequest;
 import com.handy.appserver.dto.ProductUpdateRequest;
 import com.handy.appserver.dto.ProductResponse;
 import com.handy.appserver.dto.ProductListResponse;
+import com.handy.appserver.dto.ProductSearchRequest;
+import com.handy.appserver.dto.ProductSearchResponse;
 import com.handy.appserver.entity.product.Product;
 import com.handy.appserver.entity.product.ProductShape;
 import com.handy.appserver.entity.product.ProductSize;
@@ -144,9 +146,21 @@ public class ProductController {
         return ResponseEntity.ok(response);
     }
 
-    // 상품명으로 검색
+    // 상품 검색 (새로운 API)
+    @PostMapping("/search")
+    public ResponseEntity<ProductSearchResponse> searchProducts(@RequestBody ProductSearchRequest request) {
+        ProductSearchResponse response = productService.searchProducts(
+            request.getKeyword(), 
+            request.getPage(), 
+            request.getSize(), 
+            request.getSort()
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    // 상품명으로 검색 (기존 API - 하위 호환성 유지)
     @GetMapping("/search")
-    public ResponseEntity<Page<ProductListResponse>> searchProducts(
+    public ResponseEntity<Page<ProductListResponse>> searchProductsByName(
             @RequestParam String keyword,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,

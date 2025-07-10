@@ -1,6 +1,8 @@
 package com.handy.appserver.service;
 
 import com.handy.appserver.dto.DetailImageRequest;
+import com.handy.appserver.dto.ProductListResponse;
+import com.handy.appserver.dto.ProductSearchResponse;
 import com.handy.appserver.entity.product.*;
 import com.handy.appserver.entity.user.User;
 import com.handy.appserver.entity.user.UserRole;
@@ -10,7 +12,9 @@ import com.handy.appserver.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -248,5 +252,28 @@ public class ProductService {
     // 여러 상품 조회
     public List<Product> getProductsByIds(List<Long> productIds) {
         return productRepository.findByIds(productIds);
+    }
+
+    // 상품 검색 (활성화된 상품만)
+    public ProductSearchResponse searchProducts(String keyword, int page, int size, ProductSortType sort) {
+        // 페이지는 1부터 시작하므로 0부터 시작하는 Spring Data Page로 변환
+        Pageable pageable = createPageable(page - 1, size, sort);
+        
+        Page<Product> productPage;
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            productPage = productRepository.findByIsActiveTrueAndNameContaining(keyword.trim(), pageable);
+        } else {
+            productPage = productRepository.findByIsActiveTrue(pageable);
+        }
+        
+        Page<ProductListResponse> responsePage = productPage.map(ProductListResponse::new);
+        return ProductSearchResponse.from(responsePage);
+    }
+
+    private Pageable createPageable(int page, int size, ProductSortType sort) {
+        if (sort == null) {
+            sort = ProductSortType.CREATED_AT_DESC; // 기본값: 최신순
+        }
+        return PageRequest.of(page, size, Sort.by(Sort.Direction.fromString(sort.getDirection()), sort.getField()));
     }
 }
