@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 public class ProductResponse {
     private final Long id;
     private final String name;
+    private final String description;
     private final String mainImageUrl;
     private final List<ProductImageResponse> detailImages;
     private final ProductShape shape;
@@ -30,6 +31,7 @@ public class ProductResponse {
     public ProductResponse(Product product) {
         this.id = product.getId();
         this.name = product.getName();
+        this.description = product.getDescription();
         this.mainImageUrl = product.getMainImageUrl();
         this.detailImages = product.getDetailImages().stream()
                 .map(ProductImageResponse::new)

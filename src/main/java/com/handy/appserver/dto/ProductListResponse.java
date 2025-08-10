@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 public class ProductListResponse {
     private final Long id;
     private final String name;
+    private final String description;
     private final String mainImageUrl;
     private final BigDecimal price;
     private final Integer productionDays;
@@ -24,6 +25,7 @@ public class ProductListResponse {
     public ProductListResponse(Product product) {
         this.id = product.getId();
         this.name = product.getName();
+        this.description = product.getDescription();
         this.mainImageUrl = product.getMainImageUrl();
         this.price = product.getPrice();
         this.productionDays = product.getProductionDays();

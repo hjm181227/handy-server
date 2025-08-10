@@ -23,6 +23,9 @@ public class Product extends BaseTimeEntity {
     @Column(nullable = false)
     private String name;
 
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
     @Setter
     @Column(nullable = false)
     private String mainImageUrl;
@@ -51,6 +54,9 @@ public class Product extends BaseTimeEntity {
     @Column(nullable = false)
     private Integer productionDays;
 
+    @Column(nullable = false)
+    private boolean customAvailable;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "seller_id", nullable = false)
     private User seller;
@@ -67,10 +73,11 @@ public class Product extends BaseTimeEntity {
     private boolean isActive = true;
 
     @Builder
-    public Product(String name, String mainImageUrl, ProductShape shape, boolean shapeChangeable,
+    public Product(String name, String description, String mainImageUrl, ProductShape shape, boolean shapeChangeable,
                   ProductSize size, boolean sizeChangeable,
-                  BigDecimal price, Integer productionDays, User seller) {
+                  BigDecimal price, Integer productionDays, boolean customAvailable, User seller) {
         this.name = name;
+        this.description = description;
         this.mainImageUrl = mainImageUrl;
         this.shape = shape;
         this.shapeChangeable = shapeChangeable;
@@ -78,13 +85,15 @@ public class Product extends BaseTimeEntity {
         this.sizeChangeable = sizeChangeable;
         this.price = price;
         this.productionDays = productionDays;
+        this.customAvailable = customAvailable;
         this.seller = seller;
     }
 
-    public void update(String name, String mainImageUrl, ProductShape shape, boolean shapeChangeable,
+    public void update(String name, String description, String mainImageUrl, ProductShape shape, boolean shapeChangeable,
                       ProductSize size, boolean sizeChangeable,
-                      BigDecimal price, Integer productionDays) {
+                      BigDecimal price, Integer productionDays, boolean customAvailable) {
         this.name = name;
+        this.description = description;
         this.mainImageUrl = mainImageUrl;
         this.shape = shape;
         this.shapeChangeable = shapeChangeable;
@@ -92,6 +101,7 @@ public class Product extends BaseTimeEntity {
         this.sizeChangeable = sizeChangeable;
         this.price = price;
         this.productionDays = productionDays;
+        this.customAvailable = customAvailable;
     }
 
     public void addDetailImage(ProductImage image) {

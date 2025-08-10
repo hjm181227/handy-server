@@ -12,14 +12,15 @@ import java.util.List;
 @Setter
 public class ProductCreateRequest {
     private String name;
+    private String description;
     private ProductShape shape;
     private boolean shapeChangeable;
     private ProductSize size;
     private boolean sizeChangeable;
     private BigDecimal price;
-    private boolean customAvailable;
     private Integer productionDays;
     private List<Long> categoryIds;
     private String mainImageUrl;
     private List<DetailImageRequest> detailImages;
+    private boolean customAvailable;
 } 

@@ -2,6 +2,7 @@ package com.handy.appserver.service;
 
 import com.handy.appserver.dto.DetailImageRequest;
 import com.handy.appserver.dto.ProductListResponse;
+import com.handy.appserver.dto.ProductListPageResponse;
 import com.handy.appserver.dto.ProductSearchResponse;
 import com.handy.appserver.entity.product.*;
 import com.handy.appserver.entity.user.User;
@@ -38,6 +39,7 @@ public class ProductService {
     public Product createProduct(
             Long sellerId,
             String name,
+            String description,
             ProductShape shape,
             boolean shapeChangeable,
             ProductSize size,
@@ -65,13 +67,15 @@ public class ProductService {
         Product _product = Product.builder()
                 .seller(seller)
                 .name(name)
+                .description(description)
+                .mainImageUrl(mainImageUrl) // mainImageUrl을 빌더에서 설정
                 .shape(shape)
                 .shapeChangeable(shapeChangeable)
                 .size(size)
                 .sizeChangeable(sizeChangeable)
                 .price(price)
                 .productionDays(productionDays)
-//                .customAvailable(customAvailable)
+                .customAvailable(customAvailable)
                 .build();
 
         try {
@@ -79,7 +83,7 @@ public class ProductService {
             _product = productRepository.save(_product);
             final Long productId = _product.getId();
 
-            // 메인 이미지를 임시 폴더에서 products 폴더로 이동
+            // 메인 이미지를 임시 폴더에서 products 폴더로 이동하고 업데이트
             if (mainImageUrl != null) {
                 String finalMainImageUrl = s3Service.moveToProductsFolder(mainImageUrl, productId, true);
                 _product.setMainImageUrl(finalMainImageUrl);
@@ -120,12 +124,14 @@ public class ProductService {
             Long productId,
             Long sellerId,
             String name,
+            String description,
             ProductShape shape,
             boolean shapeChangeable,
             ProductSize size,
             boolean sizeChangeable,
             BigDecimal price,
             int productionDays,
+            boolean customAvailable,
             List<Long> categoryIds,
             String mainImageUrl,
             List<DetailImageRequest> detailImages) {
@@ -178,8 +184,8 @@ public class ProductService {
             }
 
             // 상품 정보 업데이트
-            product.update(name, product.getMainImageUrl(), shape, shapeChangeable,
-                    size, sizeChangeable, price, productionDays);
+            product.update(name, description, product.getMainImageUrl(), shape, shapeChangeable,
+                    size, sizeChangeable, price, productionDays, customAvailable);
 
             // 카테고리 업데이트
             product.getCategories().clear();
@@ -252,6 +258,40 @@ public class ProductService {
     // 여러 상품 조회
     public List<Product> getProductsByIds(List<Long> productIds) {
         return productRepository.findByIds(productIds);
+    }
+
+    // 추천 상품 목록 조회
+    public ProductListPageResponse getProductList(int listNum, String sort, Integer page) {
+        // 기본값 설정
+        if (listNum <= 0) {
+            listNum = 10;
+        }
+        
+        // 페이지 설정 (0부터 시작)
+        int pageNumber = (page != null && page > 0) ? page - 1 : 0;
+        
+        // 정렬 타입 파싱
+        ProductSortType sortType;
+        try {
+            sortType = ProductSortType.valueOf(sort.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            sortType = ProductSortType.CREATED_AT_DESC; // 기본값: 최신순
+        }
+        
+        // 추천순인 경우 임시로 최신순으로 처리 (추후 추천 알고리즘 구현 시 변경)
+        if (sortType == ProductSortType.RECOMMEND) {
+            sortType = ProductSortType.CREATED_AT_DESC;
+        }
+        
+        Pageable pageable = PageRequest.of(pageNumber, listNum, Sort.by(Sort.Direction.fromString(sortType.getDirection()), sortType.getField()));
+        Page<Product> productPage = productRepository.findByIsActiveTrue(pageable);
+        
+        return new ProductListPageResponse(
+            productPage.getContent(),
+            productPage.getTotalElements(),
+            pageNumber + 1, // 클라이언트는 1부터 시작하는 페이지 번호를 받음
+            listNum
+        );
     }
 
     // 상품 검색 (활성화된 상품만)
