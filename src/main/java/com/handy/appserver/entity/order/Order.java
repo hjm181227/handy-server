@@ -5,12 +5,15 @@ import com.handy.appserver.entity.user.User;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Getter
+@Setter
 @NoArgsConstructor
 @Table(name = "orders")
 public class Order extends BaseTimeEntity {
@@ -27,21 +30,31 @@ public class Order extends BaseTimeEntity {
     private List<OrderItem> orderItems = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "status", nullable = false)
     private OrderStatus status;
 
-    @Column(nullable = false)
+    @Column(name = "total_amount", nullable = false)
+    private BigDecimal totalAmount;
+
+    @Column(name = "delivery_address")
     private String deliveryAddress;
 
-    @Column(nullable = false)
+    @Column(name = "delivery_phone_number")
     private String deliveryPhoneNumber;
 
-    @Column(nullable = false)
+    @Column(name = "delivery_name")
     private String deliveryName;
 
-    public Order(User user, String deliveryAddress, String deliveryPhoneNumber, String deliveryName) {
+    public Order(User user, BigDecimal totalAmount) {
         this.user = user;
         this.status = OrderStatus.PENDING;
+        this.totalAmount = totalAmount;
+    }
+
+    public Order(User user, BigDecimal totalAmount, String deliveryAddress, String deliveryPhoneNumber, String deliveryName) {
+        this.user = user;
+        this.status = OrderStatus.PENDING;
+        this.totalAmount = totalAmount;
         this.deliveryAddress = deliveryAddress;
         this.deliveryPhoneNumber = deliveryPhoneNumber;
         this.deliveryName = deliveryName;
@@ -54,5 +67,17 @@ public class Order extends BaseTimeEntity {
 
     public void updateStatus(OrderStatus status) {
         this.status = status;
+    }
+
+    public void updateDeliveryInfo(String deliveryAddress, String deliveryPhoneNumber, String deliveryName) {
+        this.deliveryAddress = deliveryAddress;
+        this.deliveryPhoneNumber = deliveryPhoneNumber;
+        this.deliveryName = deliveryName;
+    }
+
+    public BigDecimal calculateTotalAmount() {
+        return orderItems.stream()
+                .map(OrderItem::getTotalPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 } 

@@ -21,9 +21,6 @@ public class User extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Getter
-    @Column(nullable = true)
-    private String profileImageUrl;
 
     @Column(nullable = false, unique = true)
     private String email;
@@ -38,8 +35,11 @@ public class User extends BaseTimeEntity {
     @Column(nullable = false, columnDefinition = "varchar(20)")
     private UserRole role;
 
-    @Column(nullable = false)
+    @Column(name = "auth_level", nullable = false)
     private Integer authLevel = 100;  // 기본 권한 레벨
+
+    @Column(name = "profile_image_url")
+    private String profileImageUrl;
 
     @OneToMany(mappedBy = "seller")
     private List<Product> products = new ArrayList<>();
