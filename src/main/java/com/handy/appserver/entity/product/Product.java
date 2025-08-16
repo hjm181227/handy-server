@@ -27,7 +27,7 @@ public class Product extends BaseTimeEntity {
     private String description;
 
     @Setter
-    @Column(nullable = false)
+    @Column(name = "main_image_url", nullable = false)
     private String mainImageUrl;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -38,23 +38,23 @@ public class Product extends BaseTimeEntity {
     @Column(nullable = false)
     private ProductShape shape;
 
-    @Column(nullable = false)
+    @Column(name = "shape_changeable", nullable = false)
     private boolean shapeChangeable;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ProductSize size;
 
-    @Column(nullable = false)
+    @Column(name = "size_changeable", nullable = false)
     private boolean sizeChangeable;
 
     @Column(nullable = false)
     private BigDecimal price;
 
-    @Column(nullable = false)
+    @Column(name = "production_days", nullable = false)
     private Integer productionDays;
 
-    @Column(nullable = false)
+    @Column(name = "custom_available", nullable = false)
     private boolean customAvailable;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -69,7 +69,7 @@ public class Product extends BaseTimeEntity {
     )
     private List<Category> categories = new ArrayList<>();
 
-    @Column(nullable = false)
+    @Column(name = "is_active", nullable = false)
     private boolean isActive = true;
 
     @Builder

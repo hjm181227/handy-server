@@ -65,10 +65,17 @@ public class CartService {
         return getCartState(userId);
     }
 
+    public Cart getCartByUserId(Long userId) {
+        return cartRepository.findByUserId(userId)
+                .orElseGet(() -> {
+                    User user = userRepository.findById(userId)
+                            .orElseThrow(() -> new CartException("User not found"));
+                    return new Cart(user);
+                });
+    }
+
     public CartStateResponse getCartState(Long userId) {
-        Cart cart = cartRepository.findByUserId(userId)
-                .orElseGet(() -> new Cart(userRepository.findById(userId)
-                        .orElseThrow(() -> new CartException("User not found"))));
+        Cart cart = getCartByUserId(userId);
 
         List<CartItem> cartItems = cart.getId() != null ? 
                 cartItemRepository.findByCartId(cart.getId()) : 
